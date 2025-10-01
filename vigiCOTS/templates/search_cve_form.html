@@ -1,0 +1,79 @@
+<div x-data="{ 
+  cpe: '',
+  name: '',
+  version: '',
+  minCVSS: 0,
+  }">
+
+  <form 
+    id="cve-form" 
+    hx-target="#ErrorsIfAny"
+    hx-post="{{ url_for('searchPage.search_cve') }}"
+  >
+    <div id="ErrorsIfAny"></div>
+
+    <fieldset>
+      <legend>Recherche par CPE</legend>
+      <div class="mb-3">
+        <label for="cpe" class="form-label">CPE :</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="cpe" 
+          name="cpe"
+          x-model="cpe"
+        >
+      </div>
+    </fieldset>
+
+    <hr>
+
+    <fieldset>
+      <legend>Recherche par Nom de COTS</legend>
+      <div class="mb-3">
+        <label for="name" class="form-label">Nom :</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="name" 
+          name="name" 
+          placeholder="ex: linux_kernel"
+          x-model="name"
+        >
+      </div>
+      <div class="mb-3">
+        <label for="version" class="form-label">Version :</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="version" 
+          name="version"
+          x-model="version"
+        >
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Limiter le score minimum CVSS:</legend>
+      <div class="mb-3">
+        <label for="min-CVSS" class="form-label">Minimum CVSS retenu</label>
+        <input 
+          type="range"
+          class="form-range"
+          min="0"
+          max="10"
+          step="0.5"
+          id="min-CVSS"
+          name="min-CVSS"
+          x-model="minCVSS"
+        >
+        <output x-text="minCVSS"></output>
+      </div>
+    </fieldset>
+
+    <!-- Bouton visible -->
+    <button type="submit" class="btn btn-primary">
+      Rechercher
+    </button>
+  </form>
+</div>

@@ -1,0 +1,112 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, get_flashed_messages, make_response
+from db import fetch_cves_by_cpe,fetch_cves_by_name, fetch_cves_by_name_version, fetch_cots_by_guessed_name, fetch_cots_by_guessed_provider
+
+routes = Blueprint('routes', __name__)
+
+@routes.route('/', methods=['GET'])
+def index():
+    messages = get_flashed_messages(with_categories=True)
+        # Re-créer les messages pour le template
+    for category, message in messages:
+        flash(message, category)
+    return render_template('base.html', messages=messages)
+
+
+@routes.route('/search_cots', methods=['POST'])
+def search_cots():
+    form = request.form
+    guessed_name = form.get('guessed_name', '').strip()
+    guessed_provider = form.get('guessed_provider', '').strip()
+    # Validation
+    if not guessed_name and not guessed_provider:
+        return render_template('partials/error.html', message="Pour rechercher un COTS, renseignez un nom potentiel de COTS")
+    else:    
+        # Traitement et redirection vers GET avec paramètres
+        return redirect(url_for('routes.cots_results', 
+                            guessed_name=guessed_name, 
+                            guessed_provider=guessed_provider))
+
+@routes.route('/search_cve', methods=['POST'])
+def search_cve():
+
+    form = request.form
+    cves, exploits = [], {}
+
+    user_cpe = form.get('cpe') or form.get('cpe2')
+    cots_name = form.get('name', '').strip()
+    version = form.get('version', '').strip()
+    cvss_min = form.get('min-CVSS', '0')
+
+        # Validation
+    if not user_cpe and not cots_name:
+        return render_template("partials/error.html", message="Pour rechercher, utilisez SOIT le CPE du COTS, soit le couple NOM, VERSION, vous pouvez mettre any ou * pour avoir toutes les versions du COTS")
+
+    # Redirection vers GET avec paramètres
+    return redirect(url_for('.cve_results',
+                           cpe=user_cpe,
+                           name=cots_name,
+                           version=version,
+                           cvss_min=cvss_min))
+
+    if user_cpe and not cots_name:
+        cves = fetch_cves_by_cpe(user_cpe, cvss_min)
+        searched=user_cpe
+    elif cots_name and not user_cpe:
+        searched=cots_name
+        if version == '':
+            cves = fetch_cves_by_name(cots_name, cvss_min)
+        else:
+            cves = fetch_cves_by_name_version(cots_name, version, cvss_min)
+            searched+= ' ' + version
+    else:
+        return render_template("partials/error.html", message="Pour rechercher, utilisez SOIT le CPE du COTS, soit le couple NOM, VERSION, vous pouvez mettre any ou * pour avoir toutes les versions du COTS")
+
+    return render_template("partials/cve_results.html", cves=cves, exploits=exploits, searched=searched)
+
+
+@routes.route('/results/cve')
+def cve_results():
+    user_cpe = request.args.get('cpe', '')
+    cots_name = request.args.get('name', '')
+    version = request.args.get('version', '')
+    cvss_min = request.args.get('cvss_min', '0')
+    
+    cves, exploits = [], {}
+    searched = ""
+    
+    if user_cpe and not cots_name:
+        cves = fetch_cves_by_cpe(user_cpe, cvss_min)
+        searched = user_cpe
+    elif cots_name and not user_cpe:
+        searched = cots_name
+        if not version:
+            cves = fetch_cves_by_name(cots_name, cvss_min)
+        else:
+            cves = fetch_cves_by_name_version(cots_name, version, cvss_min)
+            searched += f' {version}'
+    
+    return render_template("base.html",
+                         partial="partials/cve_results.html", 
+                         cves=cves, 
+                         exploits=exploits, 
+                         searched=searched)
+
+
+@routes.route('/results/cots')
+def cots_results():
+    guessed_name = request.args.get('guessed_name', '')
+    guessed_provider = request.args.get('guessed_provider', '')
+    
+    if not guessed_name and not guessed_provider:
+        return redirect(url_for('.index'))
+    
+    # Logique de recherche
+    if guessed_provider:
+        cots_list = fetch_cots_by_guessed_provider(guessed_name, guessed_provider)
+    else:
+        cots_list = fetch_cots_by_guessed_name(guessed_name)
+    
+    return render_template("base.html", 
+                         partial="partials/cots_results.html",
+                         cots_list=cots_list, 
+                         guessed_name=guessed_name)

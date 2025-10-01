@@ -1,0 +1,8 @@
+# Fichiers/répertoires à ne pas inclure dans l'image docker
+
+.git
+__pycache__
+.env
+README.md
+example.env
+

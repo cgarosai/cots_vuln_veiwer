@@ -1,0 +1,15 @@
+services:
+  vigiCOTS:
+    container_name: vigicots
+    image: vigicots
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./.env:/app/.env
+    networks:
+      - reseau_vigiCOTS
+
+networks:
+  reseau_vigiCOTS:
+    external: true

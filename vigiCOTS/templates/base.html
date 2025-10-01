@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Recherche CVE{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap5.3/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <div x-data="{ 
+        showSearchWizard: false,
+        step: 1,
+        searchType: '',
+        exactType: 'cpe',
+        minCVSS: 0,
+        
+        openSearchWizard() {
+            this.showSearchWizard = true;
+            this.step = 1;
+            this.searchType = '';
+            this.exactType = 'cpe';
+            this.minCVSS = 0;
+            // Clear previous errors
+            document.getElementById('search-errors').innerHTML = '';
+        },
+        
+        closeSearchWizard() {
+            this.showSearchWizard = false;
+        },
+        
+        nextStep() {
+            if (this.searchType) {
+                this.step = 2;
+            }
+        },
+        
+        previousStep() {
+            this.step = 1;
+        }
+    }">
+        
+        <nav class="navbar navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">Recherche de vulnérabilité et d'exploits</a>
+            </div>
+        </nav>
+
+        <main class="p-3">
+            <div class="text-center mb-4">
+                <h2 class="mb-3">Recherche de vulnérabilités</h2>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <button @click="openSearchWizard()" class="btn btn-primary btn-lg">
+                            <i class="fas fa-search me-2"></i>
+                            Commencer une recherche
+                        </button>
+                        
+                        <!-- Aide contextuelle -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <small class="text-muted">
+                                <i class="fas fa-lightbulb"></i> 
+                                <strong>Comment ça fonctionne ?</strong> L'assistant vous guidera pour choisir 
+                                le bon type de recherche selon que vous connaissez exactement le nom du produit ou non.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+              
+            {% if partial %}
+                {% include partial %}
+            {% endif %}
+        </main>
+
+        <!-- Assistant de recherche -->
+        <div x-show="showSearchWizard" 
+             x-cloak
+             x-transition.opacity
+             class="alpine-modal"
+             @click.self="closeSearchWizard()"
+             @keyup.escape.window="closeSearchWizard()">
+            
+            <div class="bg-white rounded shadow wizard-container">
+                <div class="wizard-header">
+                    <button @click="closeSearchWizard()" 
+                            class="btn-close position-absolute top-0 end-0 m-3"
+                            aria-label="Close"></button>
+                    
+                    <!-- Indicateur d'étapes -->
+                    <div class="d-flex justify-content-center mb-4 pt-4">
+                        <div class="d-flex align-items-center">
+                            <div class="step-indicator" 
+                                 :class="step >= 1 ? 'active' : ''">1</div>
+                            <div class="step-line" 
+                                 :class="step >= 2 ? 'active' : ''"></div>
+                            <div class="step-indicator" 
+                                 :class="step >= 2 ? 'active' : ''">2</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="wizard-body">
+                    <!-- Étape 1: Choix du type de recherche -->
+                    <div x-show="step === 1" x-transition>
+                        <h4 class="text-center mb-4">Quel type de recherche souhaitez-vous faire ?</h4>
+                        
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="search-option-card" 
+                                     :class="searchType === 'exact' ? 'selected' : ''"
+                                     @click="searchType = 'exact'"
+                                     @dblclick="searchType = 'exact'; nextStep()">
+                                    <div class="card-icon exact-icon">
+                                        <i class="fas fa-bullseye fa-3x"></i>
+                                    </div>
+                                    <h5 class="card-title">Recherche précise</h5>
+                                    <p class="card-description">
+                                        J'ai le <strong>CPE exact</strong> ou le <strong>nom précis</strong> du produit
+                                    </p>
+                                    <div class="card-examples">
+                                        <strong>Exemples :</strong><br>
+                                        <code>linux_kernel</code><br>
+                                        <code>cpe:2.3:a:apache:http_server:2.4.41</code>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="searchType" value="exact" 
+                                               x-model="searchType" id="exact">
+                                        <label class="form-check-label" for="exact">
+                                            Recherche précise
+                                        </label>
+                                    </div>
+                                    <div class="double-click-hint">
+                                        <small class="text-muted">
+                                            <i class="fas fa-mouse-pointer"></i> Double-clic pour continuer
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="search-option-card"
+                                     :class="searchType === 'fuzzy' ? 'selected' : ''"
+                                     @click="searchType = 'fuzzy'"
+                                     @dblclick="searchType = 'fuzzy'; nextStep()">
+                                    <div class="card-icon fuzzy-icon">
+                                        <i class="fas fa-search fa-3x"></i>
+                                    </div>
+                                    <h5 class="card-title">Recherche de produit</h5>
+                                    <p class="card-description">
+                                        Je connais <strong>approximativement</strong> le nom du logiciel
+                                    </p>
+                                    <div class="card-examples">
+                                        <strong>Exemples :</strong><br>
+                                        <code>apache</code>, <code>linux</code><br>
+                                        <code>microsoft office</code>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="searchType" value="fuzzy" 
+                                               x-model="searchType" id="fuzzy">
+                                        <label class="form-check-label" for="fuzzy">
+                                            Recherche approximative
+                                        </label>
+                                    </div>
+                                    <div class="double-click-hint">
+                                        <small class="text-muted">
+                                            <i class="fas fa-mouse-pointer"></i> Double-clic pour continuer
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="wizard-actions">
+                            <button @click="nextStep()" 
+                                    :disabled="!searchType"
+                                    class="btn btn-primary btn-lg">
+                                Continuer
+                                <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Étape 2: Formulaire approprié -->
+                    <div x-show="step === 2" x-transition>
+                        <!-- Zone d'erreurs -->
+                        <div id="search-errors"></div>
+                        
+                        <!-- Formulaire recherche exacte -->
+                        <div x-show="searchType === 'exact'">
+                            <div class="wizard-header-step2">
+                                <i class="fas fa-bullseye text-success me-2"></i>
+                                <h4>Recherche précise de vulnérabilités</h4>
+                            </div>
+                            
+                            <div class="alert alert-success">
+                                <i class="fas fa-info-circle"></i>
+                                Utilisez cette recherche si vous connaissez exactement le nom du produit ou son CPE.
+                            </div>
+                            
+                            <form hx-post="{{ url_for('searchPage.search_cve') }}" 
+                                  hx-target="#search-errors"
+                                  hx-target-error="#search-errors">
+                                
+                                <!-- Onglets pour CPE vs Nom -->
+                                <div class="search-tabs">
+                                    <div class="nav nav-pills mb-4" role="tablist">
+                                        <button type="button" 
+                                                class="nav-link" 
+                                                @click="exactType = 'cpe'" 
+                                                :class="exactType === 'cpe' ? 'active' : ''">
+                                            <i class="fas fa-code me-2"></i>Par CPE
+                                        </button>
+                                        <button type="button" 
+                                                class="nav-link" 
+                                                @click="exactType = 'name'"
+                                                :class="exactType === 'name' ? 'active' : ''">
+                                            <i class="fas fa-tag me-2"></i>Par nom exact
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div x-show="exactType === 'cpe'" x-transition>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">CPE complet :</label>
+                                        <input type="text" class="form-control form-control-lg font-monospace" 
+                                               name="cpe"
+                                               placeholder="cpe:2.3:a:vendor:product:version:*:*:*:*:*:*:*">
+                                        <div class="form-text">
+                                            <strong>Format :</strong> cpe:2.3:type:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-show="exactType === 'name'" x-transition>
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Nom exact du produit :</label>
+                                                <input type="text" class="form-control form-control-lg" 
+                                                       name="name"
+                                                       placeholder="linux_kernel">
+                                                <div class="form-text">
+                                                    Nom tel qu'il apparaît dans la base CVE (sensible à la casse)
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Version (optionnel) :</label>
+                                                <input type="text" class="form-control form-control-lg" 
+                                                       name="version"
+                                                       placeholder="5.4.0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Score CVSS minimum :</label>
+                                    <input type="range" class="form-range" 
+                                           min="0" max="10" step="0.5" 
+                                           name="min-CVSS" x-model="minCVSS">
+                                    <div class="d-flex justify-content-between small text-muted">
+                                        <span>0.0 (Tous)</span>
+                                        <span class="fw-bold text-primary">
+                                            <span x-text="minCVSS"></span>
+                                            <span x-show="minCVSS >= 9.0" class="text-danger">(Critique)</span>
+                                            <span x-show="minCVSS >= 7.0 && minCVSS < 9.0" class="text-warning">(Élevé)</span>
+                                            <span x-show="minCVSS >= 4.0 && minCVSS < 7.0" class="text-info">(Moyen)</span>
+                                            <span x-show="minCVSS > 0 && minCVSS < 4.0" class="text-success">(Faible)</span>
+                                        </span>
+                                        <span>10.0 (Max)</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="wizard-actions">
+                                    <button type="button" @click="previousStep()" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Retour
+                                    </button>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-shield-virus me-2"></i>Rechercher les CVE
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Formulaire recherche approximative -->
+                        <div x-show="searchType === 'fuzzy'">
+                            <div class="wizard-header-step2">
+                                <i class="fas fa-search text-info me-2"></i>
+                                <h4>Recherche de produits</h4>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb"></i>
+                                Cette recherche va d'abord trouver les produits correspondants. 
+                                Vous pourrez ensuite rechercher leurs vulnérabilités directement depuis les résultats.
+                            </div>
+                            
+                            <form hx-post="{{ url_for('searchPage.search_cots') }}" 
+                                  hx-target="#search-errors"
+                                  hx-target-error="#search-errors">
+                                
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-4">
+                                            <label class="form-label fw-bold">Nom approximatif du produit :</label>
+                                            <input type="text" class="form-control form-control-lg" 
+                                                   name="guessed_name"
+                                                   placeholder="apache, linux, microsoft office...">
+                                            <div class="form-text">
+                                                Tapez une partie du nom que vous connaissez
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-4">
+                                            <label class="form-label fw-bold">Fabricant (optionnel) :</label>
+                                            <input type="text" class="form-control form-control-lg" 
+                                                   name="guessed_provider"
+                                                   placeholder="microsoft, apache...">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="wizard-actions">
+                                    <button type="button" @click="previousStep()" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Retour
+                                    </button>
+                                    <button type="submit" class="btn btn-info btn-lg">
+                                        <i class="fas fa-search me-2"></i>Chercher les produits
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='alpine3.15.0.js') }}"></script>
+    <script src="{{ url_for('static', filename='htmx2.0.7.min.js') }}"></script>
+    
+    <!-- Script pour gérer le succès vs erreur -->
+    <script>
+    document.addEventListener('htmx:afterRequest', function(event) {
+        const xhr = event.detail.xhr;
+        const target = event.detail.target;
+        
+        // Si la réponse est un succès ET contient du HTML de résultats
+        if (xhr.status === 200 && (xhr.responseText.includes('<table') || xhr.responseText.includes('Resultats pour'))) {
+            // Rediriger vers main et fermer la modale
+            document.querySelector('main').innerHTML = xhr.responseText;
+            
+            // Fermer la modale
+            const component = document.querySelector('[x-data]');
+            if (component && component._x_dataStack && component._x_dataStack[0]) {
+                component._x_dataStack[0].showSearchWizard = false;
+            }
+        }
+        // Sinon, les erreurs restent affichées dans la modale
+    });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

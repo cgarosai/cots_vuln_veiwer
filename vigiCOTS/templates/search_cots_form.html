@@ -1,0 +1,46 @@
+<div x-data="{
+    guessed_name: '',
+    guessed_provider: ''
+}"
+
+>
+
+    <form 
+        id="cots-form" 
+        hx-post="{{ url_for('searchPage.search_cots') }}"
+        hx-target="#ErrorsIfAnyCOTS"
+    >
+       
+        <div id="ErrorsIfAnyCOTS"></div>
+
+        <fieldset>
+            <legend>Recherche d’un COTS par nom</legend>
+            <div class="mb-3">
+                <label for="guessed_name" class="form-label">Nom du produit :</label>
+                <input 
+                type="text" 
+                class="form-control" 
+                    id="guessed_name" 
+                    name="guessed_name"
+                    x-model="guessed_name"
+                >
+            </div>
+        </fieldset>  
+        <hr>      
+        <fieldset>
+            <div class="mb-3">
+                <label for="guessed_provider" class="form-label">Nom du vendor :</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="guessed_provider" 
+                    name="guessed_provider"
+                     x-model="guessed_provider"
+                >
+            </div>
+            
+            
+        </fieldset>
+        <button type="submit" class="btn btn-primary">Rechercher</button>
+    </form>
+</div>

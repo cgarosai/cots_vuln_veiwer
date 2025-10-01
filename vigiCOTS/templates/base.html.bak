@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Recherche CVE{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap5.3/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='DataTables2.2.2/css/datatables.min.css') }}">
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">Recherche de vulnérabilité et d'exploits</a>
+        </div>
+    </nav>
+
+    <main class="p-3">
+        <div class="d-flex gap-3 justify-content-center mb-4">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCVE">Recherche par CPE</button>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalCOTS">Recherche d'un nom de COTS</button>
+        </div>
+          
+        <div class="container-fluid mt-4">
+            <div id="cve-results" class="mb-5"></div>
+            <div id="cots-results" class="mb-5"></div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='jquery.js') }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap5.3/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='DataTables2.2.2/js/datatables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='DataTables2.2.2/js/datatables.bootstrap5.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+    
+    
+    
+    {% block scripts %}{% endblock %}
+
+<!-- Modal: Recherche par CPE -->
+<div class="modal fade" id="modalCVE" tabindex="-1" aria-labelledby="modalCVELabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalCVELabel">Recherche par CPE</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          {% include 'search_cve_form.html' %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal: Recherche par nom/version -->
+  <div class="modal fade" id="modalCOTS" tabindex="-1" aria-labelledby="modalCOTSLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalCOTSLabel">Recherche d'un nom de COTS</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          {% include 'search_cots_form.html' %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</body>
+</html>
